@@ -135,6 +135,7 @@ string vehicle_id FK
 ```
 ## High-Level Sequence Diagrams
 **User Registration**
+
 Note: A user can select between one of these three roles during registration: manager, technician, or driver. The admin role is reserved for the first created account.
 ```mermaid
 sequenceDiagram
