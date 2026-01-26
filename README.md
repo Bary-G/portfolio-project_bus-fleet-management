@@ -42,94 +42,141 @@ PresentationLayer --> BusinessLogicLayer : Calls
 BusinessLogicLayer --> PersistenceLayer : Data Access
 ```
 
+## Mock-up
+https://www.figma.com/make/PGpOrxlnHuEgmc2D14URK0/Application-de-gestion-de-flotte?t=OuzGVjcRWPqfKHCu-1
+
 ## Components, classes and database
 **Classes diagram**
 ```mermaid
 classDiagram
 class BaseModel {
-+UUID id
-+Date created_at
-+Date updated_at
-+save()
-+delete()
-+to_dict()
-+update(attrs)
-+list(filters)
+    +UUID id
+    +Date created_at
+    +Date updated_at
+    +save()
+    +delete()
+    +to_dict()
+    +update(attrs)
+    +list(filters)
 }
+
 class User {
-+String first_name
-+String last_name
-+String email
-+String password
-+String role
-+Bool is_admin
-+register()
-+update_profile()
+    +String first_name
+    +String last_name
+    +String email
+    +String password
+    +String role
+    +register()
+    +update_profile()
 }
+
 class Vehicle {
-+String title
-+String description
-+String engine_type
-+String license_plate
-+Int doors
-+Float length
-+Float price
+    +String number
+    +Int capacity
+    +String status
+    +String engine_type
+    +String euro_standard
+    +Int doors
+    +Float length
+    +Float price
 }
-class Note {
-+String comment
+
+class Report {
+    +String comment
 }
+
 class Route {
-+String route_number
-+String name
-+String description
+    +String route_number
+    +String name
+    +String description
 }
+
+class Assignment {
+    +Date date
+    +String time
+}
+
+class Maintenance {
+    +String type
+    +Date date
+    +String time
+}
+
 BaseModel <|-- User
 BaseModel <|-- Vehicle
-BaseModel <|-- Note
+BaseModel <|-- Report
 BaseModel <|-- Route
-User "1" --> "*" Vehicle : owns
-User "1" --> "*" Note : writes
-Vehicle "1" --> "*" Note : receives
-Route "1" --> "*" Vehicle : uses
+BaseModel <|-- Assignment
+BaseModel <|-- Maintenance
+
+User "1" --> "*" Report : writes
+Vehicle "1" --> "*" Report : receives
+
+Vehicle "1" --> "*" Assignment : assigned_to
+Route "1" --> "*" Assignment : includes
+
+Vehicle "1" --> "*" Maintenance : has
 
 ```
 **ER diagram**
 ```mermaid
 erDiagram
-USER ||--o{ VEHICLE : owns
-USER ||--o{ NOTE : writes
-VEHICLE ||--o{ NOTE : receives
-ROUTE ||--o{ VEHICLE : uses
+USER ||--o{ REPORT : writes
+VEHICLE ||--o{ REPORT : receives
+VEHICLE ||--o{ ASSIGNMENT : assigned_to
+ROUTE ||--o{ ASSIGNMENT : includes
+VEHICLE ||--o{ MAINTENANCE : has
+
 USER {
-string id
-string first_name
-string last_name
-string email
-string password
-string role
-boolean is_admin
+    string id
+    string first_name
+    string last_name
+    string email
+    string password
+    string role
 }
+
 VEHICLE {
-string id
-string title
-string description
-string engine_type
-float length
-float price
-int doors
-string owner_id FK
+    string id
+    string number
+    int capacity
+    string status
+    float length
+    float price
+    int doors
+    int seats
+    string engine_type
+    string euro_standard
 }
+
 ROUTE {
-string id
-string route_number
-string name
-string description
+    string id
+    string route_number
+    string name
+    string description
 }
-NOTE {
-string id
-string comment
-string user_id FK
-string vehicle_id FK
+
+REPORT {
+    string id
+    string comment
+    string user_id FK
+    string vehicle_id FK
+}
+
+ASSIGNMENT {
+    string id
+    string vehicle_id FK
+    string route_id FK
+    date date
+    string time
+}
+
+MAINTENANCE {
+    string id
+    string vehicle_id FK
+    string type
+    date date
+    string time
 }
 
 ```
@@ -143,52 +190,130 @@ participant User
 participant API
 participant BusinessLogic
 participant Database
+
 User->>API: Register (email, password, role, etc.)
-API->>BusinessLogic: Validate & create User
-BusinessLogic->>Database: Insert new User
+API->>BusinessLogic: Validate & create user
+BusinessLogic->>Database: INSERT User
 Database-->>BusinessLogic: OK
-BusinessLogic-->>API: Success (Status 201)
+BusinessLogic-->>API: Success (201)
 API-->>User: User created
+
 ```
-**Create a new vehicle**
+**Add a new bus**
 ```mermaid
 sequenceDiagram
-participant  User
-participant  API
-participant  BusinessLogic
-participant  Database
-User->>API: Create  Vehicle  (title, desc, motorisation, price, etc.)
-API->>BusinessLogic: Validate & create  Vehicle
-BusinessLogic->>Database: Insert  Vehicle
+participant Admin
+participant API
+participant BusinessLogic
+participant Database
+
+Admin->>API: Create Bus (number, capacity, status, etc.)
+API->>BusinessLogic: Validate & create bus
+BusinessLogic->>Database: INSERT Bus
 Database-->>BusinessLogic: OK
-BusinessLogic-->>API: Success (Status 201)
-API-->>User: Vehicle  created
+BusinessLogic-->>API: Success (201) + Bus ID
+API-->>Admin: Bus created
+
 ```
-**Add a new note**
+**Fetch a List of buses**
 ```mermaid
 sequenceDiagram
-participant  User
-participant  API
-participant  BusinessLogic
-participant  Database
-User->>API: Submit  Note  (text)
-API->>BusinessLogic: Validate & create  Note
-BusinessLogic->>Database: Insert  Note
+participant User
+participant API
+participant BusinessLogic
+participant Database
+
+User->>API: Request list of Bus
+API->>BusinessLogic: Fetch Bus
+BusinessLogic->>Database: Query Bus
+Database-->>BusinessLogic: Return Bus
+BusinessLogic-->>API: List of Bus
+API-->>User: Send Bus JSON
+
+```
+**Submit a new report**
+```mermaid
+sequenceDiagram
+participant User
+participant API
+participant BusinessLogic
+participant Database
+
+User->>API: Submit report (busId, text)
+API->>BusinessLogic: Check bus exists, validate & create report
+BusinessLogic->>Database: INSERT Report
 Database-->>BusinessLogic: OK
-BusinessLogic-->>API: Success  (Status 201)
-API-->>User: Note  added
+BusinessLogic-->>API: Success (201)
+API-->>User: Report added
+
 ```
-**Fetching a list of vehicles**
+**Assigning a bus to a route**
 ```mermaid
 sequenceDiagram
-participant  User
-participant  API
-participant  BusinessLogic
-participant  Database
-User->>API: Request  list  of  vehicles
-API->>BusinessLogic: Fetch  vehicles
-BusinessLogic->>Database: Query  vehicles
-Database-->>BusinessLogic: Return  vehicles
-BusinessLogic-->>API: List  of  vehicles
-API-->>User: Send  vehicles  JSON
+participant Manager
+participant API
+participant BusinessLogic
+participant Database
+
+Manager->>API: Assign bus to route (busId, routeId, date, time)
+API->>BusinessLogic: Check bus availability
+BusinessLogic->>Database: SELECT status, assignments
+Database-->>BusinessLogic: Bus data
+BusinessLogic->>BusinessLogic: Verify availability
+BusinessLogic->>Database: INSERT Assignment (busId, routeId, date, time)
+Database-->>BusinessLogic: OK
+BusinessLogic-->>API: Success (201)
+API-->>Manager: Bus assigned
+
 ```
+**Schedule maintenance**
+```mermaid
+sequenceDiagram
+participant Technician
+participant API
+participant BusinessLogic
+participant Database
+
+Technician->>API: Schedule maintenance (busId, type, date, time)
+API->>BusinessLogic: Validate request
+BusinessLogic->>Database: SELECT status
+Database-->>BusinessLogic: Bus data
+BusinessLogic->>BusinessLogic: Check availability
+BusinessLogic->>Database: INSERT Maintenance
+Database-->>BusinessLogic: OK
+BusinessLogic-->>API: Success (201)
+API-->>Technician: Maintenance scheduled
+
+```
+**Retire a bus**
+```mermaid
+sequenceDiagram
+participant Admin
+participant API
+participant BusinessLogic
+participant Database
+
+Admin->>API: Retire bus (busId, reason)
+API->>BusinessLogic: Check bus exists
+BusinessLogic->>Database: SELECT status
+Database-->>BusinessLogic: Bus data
+BusinessLogic->>BusinessLogic: Verify bus is inactive
+BusinessLogic->>Database: UPDATE Bus SET status = "Retired"
+Database-->>BusinessLogic: OK
+BusinessLogic-->>API: Success (200)
+API-->>Admin: Bus retired
+
+```
+
+## Selected technologies
+**Back-End**
+- Python : Simple language, it can hold each cases of this project
+- Flask : This framework is easy to implement with Python for it's module
+
+**Database**
+- PostgreSQL : Very efficient, scalable, secured and open-source
+
+**Front-End**
+- JavaScript : Very polyvalent, from refining the front-end, to fetch or serialize datas to back-end
+- HTML, CSS : Pages and styles will be manually builded
+- Jinja : It can build a single page with multiples pages (takes a pre-builded header, footer and aside menu with a main page)
